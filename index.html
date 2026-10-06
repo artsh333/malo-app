@@ -590,9 +590,14 @@ function vAdminList() {
   const chips = `<div class="tabs">${[['all', 'Все · ' + A.list.length], ['unpaid', 'Ждут оплату · ' + A.list.filter(unpaid).length]].map(([v, l]) =>
     `<button class="chip ${S.listFilter === v ? 'on' : ''}" data-a="listFilter" data-v="${v}">${l}</button>`).join('')}</div>`;
   if (!items.length) return chips + '<div class="card center muted">Броней нет</div>';
-  let html = chips, last = '';
+  let html = chips + `<button class="btn2" style="color:#FF6B8B;border-color:#FF6B8B" data-a="aCancelAll" ${S.busy ? 'disabled' : ''}>Отменить все будущие брони (${A.list.length})</button>`, last = '';
   for (const b of items) {
-    if (b.date !== last) { html += `<div class="sec" style="margin-top:6px">${fmtDay(b.date)}</div>`; last = b.date; }
+    if (b.date !== last) {
+      const n = A.list.filter(x => x.date === b.date).length;
+      html += `<div class="between" style="margin-top:8px"><div class="sec">${fmtDay(b.date)}</div>
+        <button class="btn2 sm" data-a="aCancelDay" data-date="${b.date}" ${S.busy ? 'disabled' : ''}>Отменить день (${n})</button></div>`;
+      last = b.date;
+    }
     const cl = b.clients || {};
     const status = b.payment_status === 'pending' ? (b.receipt_at ? 'чек на проверке' : 'не оплачено') : PAY_SHORT[b.payment_status] || PAY[b.payment_status];
     html += `<div class="card">
@@ -601,7 +606,8 @@ function vAdminList() {
       <span class="small">${b.people} чел. · ${rub(b.total - b.discount)} · предоплата ${rub(b.prepay)} · ${METHOD[b.payment_method]}${b.series_id ? ' · еженедельная' : ''}</span>
       ${b.purpose ? `<span class="small">Цель: ${esc(b.purpose)}</span>` : ''}
       <div class="row" style="gap:6px">${b.receipt_path ? `<button class="btn2 pink sm" data-a="aReceipt" data-id="${b.id}">Чек</button>` : ''}
-      <button class="btn2 sm" data-a="aGoDay" data-date="${b.date}">Открыть день</button></div>
+      <button class="btn2 sm" data-a="aGoDay" data-date="${b.date}">Открыть день</button>
+      <button class="btn2 sm" data-a="cancelBooking" data-id="${b.id}">Отменить</button></div>
     </div>`;
   }
   return html;
@@ -912,6 +918,28 @@ const A = {
     w = w.includes(x) ? w.filter(y => y !== x) : [...w, x];
     obj.weekdays = w.length === 7 ? null : w.sort((a, b) => a - b);
     render();
+  },
+  async aCancelDay(d) {
+    const n = S.admin.list.filter(b => b.date === d.date).length;
+    if (!(await ask(`Отменить все брони на ${fmtDay(d.date)} (${n} шт.)? Клиенты получат сообщение.`))) return;
+    S.busy = true; render();
+    try {
+      const r = await api('admin_cancel_many', { date: d.date });
+      await refreshAdmin();
+      toast(`Отменено: ${r.cancelled}` + (r.refunds ? ` · вернуть предоплату: ${r.refunds}` : ''));
+    } finally { S.busy = false; render(); }
+  },
+  async aCancelAll() {
+    const n = S.admin.list.length;
+    if (!n) return toast('Броней нет');
+    if (!(await ask(`Отменить ВСЕ будущие брони (${n} шт.)?`))) return;
+    if (!(await ask(`Точно? Все ${n} броней отменятся, клиенты получат сообщение. Вернуть их будет нельзя.`))) return;
+    S.busy = true; render(); toast('Отменяем…');
+    try {
+      const r = await api('admin_cancel_many', { all: true });
+      await refreshAdmin();
+      toast(`Отменено: ${r.cancelled}` + (r.refunds ? ` · вернуть предоплату: ${r.refunds}` : ''));
+    } finally { S.busy = false; render(); }
   },
   async aEventBroadcast(d) {
     if (!(await ask('Разослать анонс этого ивента всем клиентам?'))) return;

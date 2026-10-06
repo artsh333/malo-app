@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>MALO</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Wet+Paint&family=Caveat:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--bg:#0D0A0C;--s1:#1A1218;--s2:#2A1621;--line:#3A2533;--line2:#4A2A3C;--pink:#FF2E93;--soft:#FFB8D6;--text:#FFF4F8;--muted:#C9A9B9;--dim:#8E7383;--ink:#1A0610}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,'Segoe UI',system-ui,sans-serif}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+#app{max-width:520px;margin:0 auto;padding:20px 18px 48px;display:flex;flex-direction:column;gap:20px;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+button:disabled{cursor:default}
+input,textarea,select{font-family:inherit;font-size:16px;color:var(--text);background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:13px 14px;width:100%}
+textarea{min-height:110px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--pink)}
+.row{display:flex;align-items:center;gap:10px}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px}
+.sec{font-size:12px;letter-spacing:2px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.card{background:var(--s1);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.muted{color:var(--muted);font-size:14px}
+.small{font-size:12px;color:var(--muted)}
+.hand{font-family:Caveat,cursive;font-weight:700}
+.logo{font-family:'Rubik Wet Paint',Impact,sans-serif;font-size:52px;line-height:.95;color:var(--pink);transform:rotate(-6deg);display:inline-block}
+.btn{border:none;background:var(--pink);color:var(--ink);font-weight:800;font-size:16px;padding:16px;border-radius:16px;width:100%}
+.btn:disabled{opacity:.4}
+.btn2{border:1px solid var(--line2);background:none;color:var(--text);font-weight:600;font-size:14px;padding:10px 14px;border-radius:12px;white-space:nowrap}
+.btn2.pink{color:var(--pink);border-color:var(--pink)}
+.btn2.sm{padding:7px 10px;font-size:12px}
+.back{width:44px;height:44px;border-radius:22px;background:var(--s1);border:none;color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.h1{font-size:24px;font-weight:800}
+.hero{background:var(--pink);color:var(--ink);border-radius:24px;padding:22px;border:none;text-align:left;position:relative;width:100%;display:flex;flex-direction:column;gap:6px}
+.hero .t{font-size:26px;font-weight:800;line-height:1.1}
+.hero .arr{position:absolute;right:20px;bottom:20px;width:48px;height:48px;border-radius:24px;background:var(--ink);display:flex;align-items:center;justify-content:center}
+.hero2{background:var(--s1);border:1.5px solid var(--pink);color:var(--text);border-radius:24px;padding:20px 22px;text-align:left;width:100%}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.days::-webkit-scrollbar,.tabs::-webkit-scrollbar{display:none}
+.day{flex:0 0 52px;height:62px;border-radius:14px;border:1px solid var(--line);background:var(--s1);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.day b{font-size:18px}.day span{font-size:11px;font-weight:600}
+.day.on,.slot.on,.chip.on{background:var(--pink);color:var(--ink);border-color:var(--pink)}
+.slot{height:54px;border-radius:14px;border:1px solid var(--line);background:var(--s1);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.slot b{font-size:15px}.slot span{font-size:10px;font-weight:600}
+.slot.busy{background:#2A1E25;color:var(--dim);border-color:transparent;text-decoration:line-through}
+.slot.ev{background:none;border:1px dashed var(--soft);color:var(--soft)}
+.chip{border:1px solid var(--line);background:var(--s1);color:var(--text);border-radius:14px;padding:10px 14px;font-weight:600;font-size:14px;white-space:nowrap}
+.tag{font-size:11px;font-weight:800;letter-spacing:1px;padding:5px 9px;border-radius:10px;background:var(--soft);color:var(--ink);white-space:nowrap}
+.tag.dim{background:var(--s1);color:var(--soft);letter-spacing:0;font-weight:600;font-size:12px;padding:8px 12px}
+.datebox{width:58px;height:62px;border-radius:14px;background:var(--s2);border:1px solid var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.datebox b{font-size:22px;color:var(--pink);line-height:1}.datebox span{font-size:11px;font-weight:700;color:var(--soft)}
+.evcard{background:var(--s1);border:none;color:var(--text);border-radius:20px;padding:14px;display:flex;gap:14px;align-items:center;text-align:left;width:100%}
+.stepper{display:flex;align-items:center;gap:14px}
+.stepper button{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--s1);color:var(--text);font-size:22px}
+.stepper b{font-size:22px;min-width:32px;text-align:center}
+label.opt{display:flex;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+label.opt input{width:20px;height:20px;accent-color:var(--pink);flex-shrink:0;padding:0}
+.lbl{font-size:13px;font-weight:700;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px}
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.hour{display:flex;gap:10px;align-items:stretch}
+.hour .t{width:46px;font-size:13px;color:var(--muted);padding-top:12px;flex-shrink:0}
+.hour .b{flex:1;border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.b.free{border:1px dashed var(--line);color:var(--dim);flex-direction:row;justify-content:space-between;align-items:center;font-size:13px}
+.b.bk{background:var(--s2)}
+.b.blk{background:var(--s1);border:1px solid var(--line2);flex-direction:row;justify-content:space-between;align-items:center}
+.b.evb{border:1px dashed var(--soft)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--text);color:var(--ink);padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;z-index:9;width:max-content;max-width:90%;text-align:center}
+.center{text-align:center}
+.spin{margin:40vh auto 0;width:36px;height:36px;border:3px solid var(--line);border-top-color:var(--pink);border-radius:50%;animation:s 1s linear infinite}
+.spin.in{margin:30px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+a{color:var(--pink)}
+</style>
+</head>
+<body>
+<div id="app"><div class="spin"></div></div>
+<script>
+// =====================================================================
+// MALO — мини-приложение
+// =====================================================================
+const API_URL = 'https://opdplrclkkjrgcmqbcfl.supabase.co/functions/v1/api';
+const CONTACT = 'malo_202';
+
+const tg = window.Telegram && window.Telegram.WebApp;
+try { tg.ready(); tg.expand(); tg.setHeaderColor('#0D0A0C'); tg.setBackgroundColor('#0D0A0C'); } catch (e) {}
+
+// ---------- Справочники ----------
+const WD = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+const MON = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MON_S = ['ЯНВ','ФЕВ','МАР','АПР','МАЯ','ИЮН','ИЮЛ','АВГ','СЕН','ОКТ','НОЯ','ДЕК'];
+const METHOD = { transfer: 'Переводом', cash: 'Наличными в зале', online: 'Онлайн' };
+const PAY = { pending: 'ждёт предоплату', prepaid: 'предоплата ✓', paid: 'оплачено ✓', refunded: 'возврат' };
+const PAY_SHORT = { pending: 'не оплачено', prepaid: 'предоплата', paid: 'оплачено' };
+const KIND = { masterclass: 'Мастер-класс', party: 'Вечеринка' };
+const BACK = { book: 'home', checkout: 'book', done: 'home', events: 'home', event: 'events', admin: 'home' };
+
+const ICON = {
+  back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
+  arrow: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF2E93" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  crown: '<svg width="34" height="22" viewBox="0 0 34 22" fill="none" stroke="#FF2E93" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" style="margin-left:26px"><path d="M3 19 L5 5 L12 12 L17 2 L22 12 L29 5 L31 19 Z"/></svg>',
+  pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A9B9" stroke-width="1.8"><path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>'
+};
+
+// ---------- Состояние ----------
+const S = {
+  data: null, error: null, screen: 'home', busy: false, toast: null,
+  book: { date: null, hours: [], people: 1, repeat: false, weeks: 4 },
+  form: { name: '', phone: '', purpose: '', method: 'transfer' },
+  eventId: null, ticket: { qty: 1, method: 'transfer' }, evFilter: 'all', last: null,
+  admin: {
+    tab: 'day', date: null, day: null, dayLoading: false, dh: { open: 9, close: 22, closed: false },
+    events: null, evLoading: false,
+    ne: { title: '', kind: 'masterclass', host: '', date: '', start: 18, end: 20, capacity: 30, price: 0, description: '' },
+    bc: ''
+  },
+  edit: null
+};
+
+// ---------- Утилиты ----------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const D = d => new Date(d + 'T00:00:00Z');
+const addDays = (d, n) => { const x = D(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const fmtDay = d => { const x = D(d); return `${WD[x.getUTCDay()]}, ${x.getUTCDate()} ${MON[x.getUTCMonth()]}`; };
+const hh = h => `${h}:00`;
+const rub = v => Math.round(v).toLocaleString('ru-RU') + ' ₽';
+const mskNow = () => new Date(Date.now() + 3 * 3600e3);
+const mskToday = () => mskNow().toISOString().slice(0, 10);
+const mskHour = () => mskNow().getUTCHours();
+const clone = o => JSON.parse(JSON.stringify(o));
+const hoursWord = n => n % 10 === 1 && n % 100 !== 11 ? 'час' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'часа' : 'часов');
+
+function toast(msg) {
+  S.toast = msg; render();
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { S.toast = null; render(); }, 3200);
+}
+
+function ask(text) {
+  return new Promise(res => {
+    if (tg && tg.showConfirm && tg.initData) { try { tg.showConfirm(text, ok => res(!!ok)); return; } catch (e) {} }
+    res(window.confirm(text));
+  });
+}
+
+function setPath(path, val) {
+  const ks = path.split('.'); let o = S;
+  for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
+  o[ks[ks.length - 1]] = val;
+}
+
+async function api(action, params = {}) {
+  let r;
+  try {
+    r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ initData: (tg && tg.initData) || '', action, params })
+    });
+  } catch (e) { throw new Error('Нет связи с сервером'); }
+  const j = await r.json().catch(() => ({ error: 'Ошибка сервера' }));
+  if (!r.ok || (j && j.error)) throw new Error((j && j.error) || 'Ошибка');
+  return j;
+}
+
+async function load() {
+  try {
+    S.data = await api('bootstrap');
+    S.error = null;
+    const me = S.data.me;
+    const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (!S.form.name) S.form.name = (me.client && me.client.name) || (u && u.first_name) || '';
+    if (!S.form.phone) S.form.phone = (me.client && me.client.phone) || '';
+  } catch (e) { S.error = e.message; }
+  render();
+}
+
+// ---------- Расчёты ----------
+function dayInfo(date) {
+  const o = S.data.dayHours.find(x => x.date === date);
+  const s = S.data.settings;
+  return o ? { open: o.open_hour, close: o.close_hour, closed: o.is_closed } : { open: s.open_hour, close: s.close_hour, closed: false };
+}
+function occKind(date, h) { const o = S.data.occupied.find(x => x.date === date && x.hour === h); return o ? o.kind : null; }
+function tierFor(n) { return S.data.tiers.find(t => n >= t.min_people && n <= t.max_people); }
+function discPct(h) {
+  return Math.max(0, ...S.data.discounts.filter(d => d.active && d.kind === 'time' && h >= d.start_hour && h < d.end_hour).map(d => d.percent));
+}
+function calc() {
+  const t = tierFor(S.book.people); const price = t ? t.price_per_hour : 0;
+  let full = 0, disc = 0;
+  for (const h of S.book.hours) { full += price; disc += Math.round(price * discPct(h) / 100); }
+  const total = full - disc;
+  return { price, full, disc, total, prepay: Math.ceil(total * S.data.settings.prepay_percent / 100) };
+}
+function tapHour(h) {
+  const hs = S.book.hours;
+  if (!hs.length) { S.book.hours = [h]; return; }
+  const min = Math.min(...hs), max = Math.max(...hs);
+  if (hs.length === 1 && h === min) S.book.hours = [];
+  else if (h === min) S.book.hours = hs.filter(x => x !== min);
+  else if (h === max) S.book.hours = hs.filter(x => x !== max);
+  else if (h === max + 1 || h === min - 1) S.book.hours = [...hs, h];
+  else S.book.hours = [h];
+}
+function cancelNote(b) {
+  const x = D(b.date); x.setUTCHours(b.start_hour - S.data.settings.cancel_hours);
+  if (mskNow() > x) return 'Отмена без возврата предоплаты';
+  return `Бесплатная отмена до ${x.getUTCDate()} ${MON[x.getUTCMonth()]}, ${hh(x.getUTCHours())}`;
+}
+
+// ---------- Общие куски ----------
+const header = title => `<div class="row"><button class="back" data-a="back" aria-label="Назад">${ICON.back}</button><div class="h1">${title}</div></div>`;
+const dateBox = d => { const x = D(d); return `<div class="datebox"><b>${x.getUTCDate()}</b><span>${MON_S[x.getUTCMonth()]}</span></div>`; };
+const field = (label, bind, val, type = 'text', extra = '') =>
+  `<div class="field"><label class="lbl" for="${bind}">${label}</label><input id="${bind}" type="${type}" data-bind="${bind}" value="${esc(val)}" ${extra}></div>`;
+function evCard(e) {
+  return `<button class="evcard" data-a="openEvent" data-id="${e.id}">${dateBox(e.date)}
+    <div class="col" style="gap:3px;flex:1;min-width:0">
+      <span class="small" style="font-weight:800;letter-spacing:1.5px;color:var(--soft)">${KIND[e.kind].toUpperCase()}</span>
+      <b style="font-size:16px">${esc(e.title)}</b>
+      <span class="small">${WD[D(e.date).getUTCDay()]}, ${hh(e.start_hour)} · ${e.seats_left > 0 ? 'осталось ' + e.seats_left + ' мест' : 'мест нет'}</span>
+    </div>${ICON.arrow}</button>`;
+}
+function dayStrip(selected, n, action) {
+  return `<div class="days">${[...Array(n)].map((_, i) => {
+    const d = addDays(mskToday(), i), x = D(d);
+    return `<button class="day ${d === selected ? 'on' : ''}" data-a="${action}" data-date="${d}"><span>${WD[x.getUTCDay()]}</span><b>${x.getUTCDate()}</b></button>`;
+  }).join('')}</div>`;
+}
+
+// ---------- Экраны ----------
+function vHome() {
+  const d = S.data, me = d.me, s = d.settings;
+  const minPrice = Math.min(...d.tiers.map(t => t.price_per_hour));
+  const ev = d.events[0];
+  const tickets = me.tickets.filter(t => t.events && t.events.date >= mskToday());
+  return `
+  <div class="between" style="align-items:flex-start">
+    <div class="col" style="gap:0">${ICON.crown}<span class="logo">MALO</span>
+      <span class="small" style="letter-spacing:4px;margin-top:6px">DANCE STUDIO</span></div>
+    ${me.isAdmin ? '<button class="btn2 pink" data-a="openAdmin">Админка</button>' : ''}
+  </div>
+  <div class="row muted">${ICON.pin} Архангельск, пр. Ломоносова, 32</div>
+  <button class="hero" data-a="openBook">
+    <span class="hand" style="font-size:20px">аренда зала</span>
+    <span class="t">Забронировать<br>зал</span>
+    <span style="font-size:14px;font-weight:600;margin-top:6px">от ${minPrice} ₽/час · ${hh(s.open_hour)}–${hh(s.close_hour)}</span>
+    <span class="arr">${ICON.arrow}</span>
+  </button>
+  <button class="hero2 between" data-a="openEvents">
+    <span class="col" style="gap:4px"><b style="font-size:22px">Афиша</b><span class="muted">Мастер-классы и вечеринки</span></span>${ICON.arrow}
+  </button>
+  ${ev ? `<div class="col"><div class="sec">Ближайший ивент</div>${evCard(ev)}</div>` : ''}
+  ${me.bookings.length ? `<div class="col"><div class="sec">Мои брони</div>${me.bookings.map(b => `
+    <div class="card">
+      <div class="between"><b style="font-size:16px">${fmtDay(b.date)} · ${hh(b.start_hour)}–${hh(b.end_hour)}</b><span class="tag">${PAY[b.payment_status]}</span></div>
+      <div class="muted">${b.people} чел. · ${rub(b.total - b.discount)} · предоплата ${rub(b.prepay)}</div>
+      <div class="between" style="border-top:1px solid var(--line);padding-top:10px"><span class="small">${cancelNote(b)}</span>
+      <button class="btn2" data-a="cancelBooking" data-id="${b.id}">Отменить</button></div>
+    </div>`).join('')}</div>` : ''}
+  ${tickets.length ? `<div class="col"><div class="sec">Мои билеты</div>${tickets.map(t => `
+    <div class="card"><div class="between"><b>${esc(t.events.title)}</b><span class="tag">${t.qty} шт.</span></div>
+    <div class="muted">${fmtDay(t.events.date)}, ${hh(t.events.start_hour)}</div></div>`).join('')}</div>` : ''}
+  <div class="row" style="flex-wrap:wrap;gap:8px">${['до ' + s.hall_capacity + ' человек', 'световое шоу', 'проф. звук', 'зеркала', 'раздевалка'].map(x => `<span class="tag dim">${x}</span>`).join('')}</div>
+  <div class="center muted">Вопросы: <a href="#" data-a="contact">@${CONTACT}</a></div>
+  <div class="hand center" style="font-size:22px;color:var(--pink);margin-top:auto">dance · people · vibes · malo ♡</div>`;
+}
+
+function vBook() {
+  const d = S.data, b = S.book, info = dayInfo(b.date);
+  const isToday = b.date === mskToday(), nowH = mskHour();
+  const timeDisc = d.discounts.filter(x => x.active && x.kind === 'time');
+  let slots;
+  if (info.closed) slots = '<div class="card center muted">В этот день зал закрыт</div>';
+  else {
+    slots = '<div class="grid4">';
+    for (let h = info.open; h < info.close; h++) {
+      const k = occKind(b.date, h), past = isToday && h <= nowH, pct = discPct(h);
+      let cls = 'slot', note = pct ? `−${pct}%` : 'свободно', dis = false;
+      if (k === 'event') { cls += ' ev'; note = 'ивент'; dis = true; }
+      else if (k) { cls += ' busy'; note = 'занято'; dis = true; }
+      else if (past) { cls += ' busy'; note = 'прошло'; dis = true; }
+      else if (b.hours.includes(h)) cls += ' on';
+      slots += `<button class="${cls}" ${dis ? 'disabled' : ''} data-a="hour" data-h="${h}"><b>${hh(h)}</b><span>${note}</span></button>`;
+    }
+    slots += '</div>';
+  }
+  const t = tierFor(b.people), c = calc(), n = b.hours.length;
+  return `${header('Бронь зала')}
+  <div class="col"><div class="sec">Дата</div>${dayStrip(b.date, 30, 'pickDay')}<div class="muted">${fmtDay(b.date)}</div></div>
+  <div class="col">
+    <div class="between"><div class="sec">Время</div>${timeDisc.map(x => `<span class="hand" style="font-size:18px;color:var(--soft)">−${x.percent}% с ${hh(x.start_hour)} до ${hh(x.end_hour)}</span>`).join('')}</div>
+    ${slots}
+    <div class="small">Нажмите на начало и продлите соседними часами</div>
+  </div>
+  <div class="col"><div class="sec">Сколько вас</div>
+    <div class="between"><div class="stepper"><button data-a="people" data-v="-1" aria-label="Меньше">−</button><b>${b.people}</b><button data-a="people" data-v="1" aria-label="Больше">+</button></div>
+    <div class="col" style="gap:2px;align-items:flex-end"><b>${t ? t.price_per_hour + ' ₽/час' : '—'}</b><span class="small">${t ? esc(t.label) : ''}</span></div></div>
+  </div>
+  <label class="opt"><input type="checkbox" data-bind="book.repeat" data-rerender="1" ${b.repeat ? 'checked' : ''}>
+    <span class="col" style="gap:2px"><b style="font-size:15px">Повторять каждую неделю</b><span class="small">Для регулярных тренировок</span></span></label>
+  ${b.repeat ? `<div class="between"><span class="muted">Сколько недель</span><div class="stepper"><button data-a="weeks" data-v="-1" aria-label="Меньше">−</button><b>${b.weeks}</b><button data-a="weeks" data-v="1" aria-label="Больше">+</button></div></div>` : ''}
+  <div class="card" style="margin-top:auto">
+    ${n ? `<div class="between muted"><span>${hh(Math.min(...b.hours))}–${hh(Math.max(...b.hours) + 1)} · ${n} ${hoursWord(n)} × ${c.price} ₽</span><span>${rub(c.full)}</span></div>
+    ${c.disc ? `<div class="between" style="color:var(--soft);font-size:14px"><span>Скидка</span><span>−${rub(c.disc)}</span></div>` : ''}
+    <div class="between" style="border-top:1px solid var(--line);padding-top:10px"><b>Предоплата ${d.settings.prepay_percent}%</b><b style="font-size:24px;color:var(--pink)">${rub(c.prepay)}</b></div>
+    ${b.repeat ? `<span class="small">Цена за одну неделю, всего ${b.weeks} нед.</span>` : ''}` : '<div class="muted center">Выберите время</div>'}
+    <button class="btn" data-a="toCheckout" ${n ? '' : 'disabled'}>Продолжить</button>
+  </div>`;
+}
+
+function methodOptions(bind, current) {
+  return ['transfer', 'cash'].map(m => `<label class="opt" style="${current === m ? 'border-color:var(--pink)' : ''}">
+    <input type="radio" name="${bind}" value="${m}" data-bind="${bind}" data-rerender="1" ${current === m ? 'checked' : ''}>
+    <span class="col" style="gap:2px"><b style="font-size:15px">${METHOD[m]}</b><span class="small">${m === 'transfer' ? 'Реквизиты придут в чат с ботом' : 'Администратор отметит оплату'}</span></span></label>`).join('');
+}
+
+function vCheckout() {
+  const b = S.book, f = S.form, c = calc(), s = S.data.settings;
+  return `${header('Оформление')}
+  <div class="card"><span class="hand" style="font-size:20px;color:var(--soft)">ваша бронь</span>
+    <b style="font-size:20px">${fmtDay(b.date)}</b>
+    <span class="muted">${hh(Math.min(...b.hours))}–${hh(Math.max(...b.hours) + 1)} · ${b.people} чел. · ${rub(c.total)}${b.repeat ? ' · ' + b.weeks + ' нед.' : ''}</span></div>
+  ${field('Имя', 'form.name', f.name, 'text', 'autocomplete="name"')}
+  ${field('Телефон', 'form.phone', f.phone, 'tel', 'autocomplete="tel" placeholder="+7"')}
+  ${field('Цель аренды <span style="font-weight:500">(необязательно)</span>', 'form.purpose', f.purpose, 'text', 'placeholder="Репетиция, съёмка, тренировка…"')}
+  <div class="col"><div class="sec">Способ предоплаты</div>${methodOptions('form.method', f.method)}</div>
+  ${f.method === 'transfer' && s.transfer_details ? `<div class="card"><span class="small">Реквизиты</span><b>${esc(s.transfer_details)}</b></div>` : ''}
+  <div class="small">Бесплатная отмена — не позднее чем за ${s.cancel_hours} ч до начала. Напомним о брони за ${s.reminder_hours} ч.</div>
+  <button class="btn" data-a="submitBooking" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Бронируем…' : 'Забронировать · предоплата ' + rub(c.prepay)}</button>`;
+}
+
+function vDone() {
+  const r = S.last || { created: [], failed: [] }, b = r.created[0], s = S.data.settings;
+  if (!b) return vHome();
+  return `<div class="col center" style="margin-top:8vh;align-items:center">
+    <span class="logo">MALO</span>
+    <div class="h1" style="margin-top:16px">Зал забронирован!</div>
+    <div class="muted">${fmtDay(b.date)}, ${hh(b.start_hour)}–${hh(b.end_hour)}${r.created.length > 1 ? ' · каждую неделю, ' + r.created.length + ' раз' : ''}</div>
+  </div>
+  ${r.failed.length ? `<div class="card"><b>Не все недели получилось забронировать</b><span class="muted">Занято: ${r.failed.map(fmtDay).join(', ')}</span></div>` : ''}
+  <div class="card"><div class="between"><span class="muted">Предоплата</span><b style="font-size:22px;color:var(--pink)">${rub(b.prepay)}</b></div>
+    ${b.payment_method === 'transfer' && s.transfer_details ? `<span class="small">Переведите по реквизитам:</span><b>${esc(s.transfer_details)}</b>` : '<span class="small">Предоплату можно внести наличными в зале.</span>'}
+  </div>
+  <div class="muted center">Все детали мы отправили в чат с ботом</div>
+  <button class="btn" data-a="home" style="margin-top:auto">На главную</button>`;
+}
+
+function vEvents() {
+  const evs = S.data.events.filter(e => S.evFilter === 'all' || e.kind === S.evFilter);
+  return `${header('Афиша')}
+  <div class="tabs">${[['all', 'Все'], ['masterclass', 'Мастер-классы'], ['party', 'Вечеринки']].map(([v, l]) =>
+    `<button class="chip ${S.evFilter === v ? 'on' : ''}" data-a="evFilter" data-v="${v}">${l}</button>`).join('')}</div>
+  ${evs.length ? evs.map(evCard).join('') : '<div class="card center muted">Скоро здесь появятся новые ивенты</div>'}
+  <div class="card center" style="background:none;border:1px dashed var(--line2)">
+    <b>Хотите провести свой ивент?</b><span class="muted">Напишите нам — обсудим дату и условия</span>
+    <a href="#" data-a="contact" style="font-weight:700">@${CONTACT}</a></div>`;
+}
+
+function vEvent() {
+  const e = S.data.events.find(x => x.id === S.eventId);
+  if (!e) return vEvents();
+  const f = S.form, t = S.ticket, paid = e.ticket_price > 0;
+  return `${header(KIND[e.kind])}
+  <div class="col" style="background:var(--pink);color:var(--ink);border-radius:24px;padding:22px;gap:8px">
+    <div class="between"><b style="font-size:12px;letter-spacing:2px">${KIND[e.kind].toUpperCase()}</b><b style="font-size:13px">${fmtDay(e.date)} · ${hh(e.start_hour)}–${hh(e.end_hour)}</b></div>
+    <div class="hand" style="font-size:38px;line-height:1">${esc(e.title)}</div>
+    ${e.host ? `<b>${esc(e.host)}</b>` : ''}
+    <b style="font-size:14px">${e.seats_left > 0 ? 'Осталось ' + e.seats_left + ' мест из ' + e.capacity : 'Мест нет'}</b>
+  </div>
+  ${e.description ? `<div class="muted" style="white-space:pre-line;line-height:1.5">${esc(e.description)}</div>` : ''}
+  ${e.seats_left > 0 ? `
+    <div class="between"><span class="muted">Билетов</span><div class="stepper"><button data-a="tq" data-v="-1" aria-label="Меньше">−</button><b>${t.qty}</b><button data-a="tq" data-v="1" aria-label="Больше">+</button></div></div>
+    ${field('Имя', 'form.name', f.name)}
+    ${field('Телефон', 'form.phone', f.phone, 'tel', 'placeholder="+7"')}
+    ${paid ? `<div class="col"><div class="sec">Оплата</div>${methodOptions('ticket.method', t.method)}</div>` : ''}
+    <button class="btn" data-a="buyTicket" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Записываем…' : paid ? 'Купить билет · ' + rub(e.ticket_price * t.qty) : 'Записаться бесплатно'}</button>` : ''}`;
+}
+
+// ---------- Админка ----------
+function vAdmin() {
+  const tab = S.admin.tab;
+  const body = { day: vAdminDay, events: vAdminEvents, prices: vAdminPrices, broadcast: vAdminBroadcast }[tab]();
+  return `${header('Админка')}
+  <div class="tabs">${[['day', 'Расписание'], ['events', 'Ивенты'], ['prices', 'Цены и скидки'], ['broadcast', 'Рассылка']].map(([v, l]) =>
+    `<button class="chip ${tab === v ? 'on' : ''}" data-a="aTab" data-v="${v}">${l}</button>`).join('')}</div>${body}`;
+}
+
+function vAdminDay() {
+  const A = S.admin, s = S.data.settings;
+  let body = '<div class="spin in"></div>';
+  if (A.day) {
+    const day = A.day;
+    const di = day.dayHours ? { open: day.dayHours.open_hour, close: day.dayHours.close_hour, closed: day.dayHours.is_closed } : { open: s.open_hour, close: s.close_hour, closed: false };
+    const occ = {}; day.occupied.forEach(o => occ[o.hour] = o);
+    const hrs = Object.keys(occ).map(Number);
+    const from = Math.min(di.open, ...hrs), to = Math.max(di.close, ...hrs.map(h => h + 1));
+    const row = (h, inner) => `<div class="hour"><div class="t">${hh(h)}</div>${inner}</div>`;
+    const seen = new Set(); let rows = '';
+    for (let h = from; h < to; h++) {
+      const o = occ[h];
+      if (o && o.booking_id) {
+        if (seen.has(o.booking_id)) continue; seen.add(o.booking_id);
+        const b = day.bookings.find(x => x.id === o.booking_id); if (!b) continue;
+        const cl = b.clients || {};
+        rows += row(h, `<div class="b bk">
+          <b>${esc(cl.name)} · ${hh(b.start_hour)}–${hh(b.end_hour)}</b>
+          <span class="small">${b.people} чел. · ${rub(b.total - b.discount)} · предоплата ${rub(b.prepay)} · ${METHOD[b.payment_method]}</span>
+          <span class="small"><a href="tel:${esc(cl.phone)}" style="color:var(--soft)">${esc(cl.phone)}</a>${cl.username ? ' · @' + esc(cl.username) : ''}</span>
+          ${b.purpose ? `<span class="small">Цель: ${esc(b.purpose)}</span>` : ''}
+          ${b.series_id ? '<span class="small">еженедельная бронь</span>' : ''}
+          <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:4px">
+            ${['pending', 'prepaid', 'paid'].map(st => `<button class="chip ${b.payment_status === st ? 'on' : ''}" style="padding:7px 10px;font-size:12px" data-a="setPay" data-kind="booking" data-id="${b.id}" data-v="${st}">${PAY_SHORT[st]}</button>`).join('')}
+            <button class="btn2 sm" data-a="cancelBooking" data-id="${b.id}">Отменить</button>
+          </div></div>`);
+      } else if (o && o.event_id) {
+        if (seen.has(o.event_id)) continue; seen.add(o.event_id);
+        const e = day.events.find(x => x.id === o.event_id);
+        rows += row(h, `<div class="b evb"><b>${esc(e ? e.title : 'Ивент')}</b><span class="small">${e ? hh(e.start_hour) + '–' + hh(e.end_hour) + ' · ' + KIND[e.kind] : ''}</span></div>`);
+      } else if (o) {
+        rows += row(h, `<div class="b blk"><span class="muted">${esc(o.block_reason)}</span><button class="btn2 pink sm" data-a="aUnblock" data-h="${h}">Открыть</button></div>`);
+      } else {
+        const out = di.closed || h < di.open || h >= di.close;
+        rows += row(h, `<div class="b free"><span>${out ? 'вне часов работы' : 'свободно'}</span>${out ? '' : `<button class="btn2 sm" data-a="aBlock" data-h="${h}">Закрыть</button>`}</div>`);
+      }
+    }
+    body = `<div class="col" style="gap:8px">${rows}</div>
+    <div class="card"><b>Часы работы в этот день</b>
+      <div class="grid2">${field('Открытие', 'admin.dh.open', A.dh.open, 'number', 'min="0" max="23"')}${field('Закрытие', 'admin.dh.close', A.dh.close, 'number', 'min="1" max="24"')}</div>
+      <label class="opt"><input type="checkbox" data-bind="admin.dh.closed" ${A.dh.closed ? 'checked' : ''}><span>Выходной — зал закрыт весь день</span></label>
+      <div class="grid2"><button class="btn2 pink" data-a="aDayHours">Сохранить</button><button class="btn2" data-a="aDayReset">Как обычно</button></div>
+      ${day.dayHours ? '<span class="small">Для этого дня заданы особые часы</span>' : `<span class="small">Обычные часы: ${hh(s.open_hour)}–${hh(s.close_hour)}</span>`}
+    </div>`;
+  }
+  return `${dayStrip(A.date, 30, 'aDay')}<div class="sec">${fmtDay(A.date)}</div>${body}`;
+}
+
+function vAdminEvents() {
+  const A = S.admin, ne = A.ne;
+  const list = !A.events ? '<div class="spin in"></div>' : (A.events.map(e => {
+    const act = (e.tickets || []).filter(t => t.status === 'active');
+    const sold = act.reduce((s, t) => s + t.qty, 0);
+    return `<div class="card">
+      <div class="between"><b>${esc(e.title)}</b><span class="tag">${KIND[e.kind]}</span></div>
+      <span class="muted">${fmtDay(e.date)}, ${hh(e.start_hour)}–${hh(e.end_hour)} · ${e.ticket_price ? rub(e.ticket_price) : 'бесплатно'}</span>
+      <span class="muted">Записано: ${sold} из ${e.capacity}</span>
+      ${act.map(t => `<div class="between small" style="border-top:1px solid var(--line);padding-top:8px">
+        <span>${esc(t.clients && t.clients.name)}, ${esc(t.clients && t.clients.phone)} · ${t.qty} шт.</span>
+        ${e.ticket_price ? (t.payment_status === 'paid' ? '<span>оплачено ✓</span>' : `<button class="btn2 sm" data-a="setPay" data-kind="ticket" data-id="${t.id}" data-v="paid">оплачено</button>`) : ''}
+      </div>`).join('')}
+      <button class="btn2" data-a="aCancelEvent" data-id="${e.id}">Отменить ивент</button></div>`;
+  }).join('') || '<div class="muted">Пока нет ивентов</div>');
+  return `<div class="col">${list}</div>
+  <div class="card"><b style="font-size:18px">Новый ивент</b>
+    ${field('Название', 'admin.ne.title', ne.title)}
+    <div class="field"><label class="lbl" for="nek">Тип</label><select id="nek" data-bind="admin.ne.kind">
+      <option value="masterclass" ${ne.kind === 'masterclass' ? 'selected' : ''}>Мастер-класс</option>
+      <option value="party" ${ne.kind === 'party' ? 'selected' : ''}>Вечеринка</option></select></div>
+    ${field('Ведущий / организатор', 'admin.ne.host', ne.host)}
+    ${field('Дата', 'admin.ne.date', ne.date, 'date')}
+    <div class="grid2">${field('Начало (час)', 'admin.ne.start', ne.start, 'number', 'min="0" max="23"')}${field('Конец (час)', 'admin.ne.end', ne.end, 'number', 'min="1" max="24"')}</div>
+    <div class="grid2">${field('Мест', 'admin.ne.capacity', ne.capacity, 'number', 'min="1"')}${field('Цена билета, ₽', 'admin.ne.price', ne.price, 'number', 'min="0"')}</div>
+    <div class="field"><label class="lbl" for="ned">Описание</label><textarea id="ned" data-bind="admin.ne.description">${esc(ne.description)}</textarea></div>
+    <span class="small">На время ивента зал автоматически закроется для аренды</span>
+    <button class="btn" data-a="aCreateEvent" ${S.busy ? 'disabled' : ''}>Создать ивент</button>
+  </div>`;
+}
+
+function initEdit() {
+  const s = S.data.settings;
+  S.edit = {
+    tiers: clone(S.data.tiers),
+    discounts: clone(S.data.discounts),
+    settings: { open_hour: s.open_hour, close_hour: s.close_hour, prepay_percent: s.prepay_percent, cancel_hours: s.cancel_hours, reminder_hours: s.reminder_hours, transfer_details: s.transfer_details || '' },
+    nd: { title: '', percent: 10, kind: 'manual', start: 9, end: 15 }
+  };
+}
+
+function vAdminPrices() {
+  if (!S.edit) initEdit();
+  const E = S.edit;
+  return `<div class="card"><b style="font-size:18px">Цены за час</b>
+    ${E.tiers.map((t, i) => `<div class="grid2">${field('Категория', `edit.tiers.${i}.label`, t.label)}${field('₽/час', `edit.tiers.${i}.price_per_hour`, t.price_per_hour, 'number', 'min="0"')}</div>`).join('')}
+  </div>
+  <div class="card"><b style="font-size:18px">Правила</b>
+    <div class="grid2">${field('Открытие', 'edit.settings.open_hour', E.settings.open_hour, 'number')}${field('Закрытие', 'edit.settings.close_hour', E.settings.close_hour, 'number')}</div>
+    <div class="grid2">${field('Предоплата, %', 'edit.settings.prepay_percent', E.settings.prepay_percent, 'number')}${field('Отмена, за ч', 'edit.settings.cancel_hours', E.settings.cancel_hours, 'number')}</div>
+    ${field('Напоминание, за ч', 'edit.settings.reminder_hours', E.settings.reminder_hours, 'number')}
+    <div class="field"><label class="lbl" for="trd">Реквизиты для перевода</label><textarea id="trd" data-bind="edit.settings.transfer_details" style="min-height:70px">${esc(E.settings.transfer_details)}</textarea></div>
+  </div>
+  <div class="card"><b style="font-size:18px">Скидки</b>
+    ${E.discounts.map((d, i) => `<div class="col" style="border-top:1px solid var(--line);padding-top:10px;gap:8px">
+      <div class="grid2">${field('Название', `edit.discounts.${i}.title`, d.title)}${field('%', `edit.discounts.${i}.percent`, d.percent, 'number', 'min="1" max="100"')}</div>
+      <span class="small">${d.kind === 'time' ? `Автоматически с ${hh(d.start_hour)} до ${hh(d.end_hour)}` : 'Вручную — после проверки'}</span>
+      <div class="between"><label class="row small"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--pink)" data-bind="edit.discounts.${i}.active" ${d.active ? 'checked' : ''}> действует</label>
+      <button class="btn2 sm" data-a="aDelDisc" data-id="${d.id}">Удалить</button></div></div>`).join('')}
+  </div>
+  <button class="btn" data-a="aSavePrices" ${S.busy ? 'disabled' : ''}>Сохранить всё</button>
+  <div class="card"><b style="font-size:18px">Новая скидка</b>
+    <div class="grid2">${field('Название', 'edit.nd.title', E.nd.title)}${field('%', 'edit.nd.percent', E.nd.percent, 'number')}</div>
+    <div class="field"><label class="lbl" for="ndk">Как применяется</label><select id="ndk" data-bind="edit.nd.kind" data-rerender="1">
+      <option value="manual" ${E.nd.kind === 'manual' ? 'selected' : ''}>Вручную</option>
+      <option value="time" ${E.nd.kind === 'time' ? 'selected' : ''}>Автоматически по времени</option></select></div>
+    ${E.nd.kind === 'time' ? `<div class="grid2">${field('С (час)', 'edit.nd.start', E.nd.start, 'number')}${field('До (час)', 'edit.nd.end', E.nd.end, 'number')}</div>` : ''}
+    <button class="btn2 pink" data-a="aAddDisc">Добавить скидку</button>
+  </div>`;
+}
+
+function vAdminBroadcast() {
+  return `<div class="card"><b style="font-size:18px">Рассылка</b>
+    <span class="muted">Сообщение получат все клиенты, которые бронировали зал или записывались на ивенты.</span>
+    <textarea data-bind="admin.bc" placeholder="Например: в субботу новый мастер-класс…">${esc(S.admin.bc)}</textarea>
+    <button class="btn" data-a="aBroadcast" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Отправляем…' : 'Отправить всем'}</button></div>`;
+}
+
+function ensureAdmin() {
+  if (S.screen !== 'admin') return;
+  const A = S.admin;
+  if (A.tab === 'day' && !A.day && !A.dayLoading) {
+    A.dayLoading = true; const date = A.date;
+    api('admin_day', { date }).then(r => {
+      if (A.date !== date) return;
+      A.day = r;
+      const i = r.dayHours || { open_hour: S.data.settings.open_hour, close_hour: S.data.settings.close_hour, is_closed: false };
+      A.dh = { open: i.open_hour, close: i.close_hour, closed: i.is_closed };
+    }).catch(e => { A.day = { bookings: [], occupied: [], events: [], dayHours: null }; toast(e.message); })
+      .finally(() => { A.dayLoading = false; render(); });
+  }
+  if (A.tab === 'events' && !A.events && !A.evLoading) {
+    A.evLoading = true;
+    api('admin_events').then(r => { A.events = r; })
+      .catch(e => { A.events = []; toast(e.message); })
+      .finally(() => { A.evLoading = false; render(); });
+  }
+}
+
+async function refreshAdmin() { S.admin.day = null; S.admin.events = null; await load(); }
+
+// ---------- Отрисовка ----------
+function render() {
+  const app = document.getElementById('app');
+  if (!S.data) {
+    app.innerHTML = S.error
+      ? `<div class="col center" style="margin-top:28vh;align-items:center"><span class="logo">MALO</span><div class="muted" style="margin-top:16px">${esc(S.error)}</div><button class="btn" data-a="reload">Повторить</button></div>`
+      : '<div class="spin"></div>';
+    return;
+  }
+  const V = { home: vHome, book: vBook, checkout: vCheckout, done: vDone, events: vEvents, event: vEvent, admin: vAdmin }[S.screen] || vHome;
+  app.innerHTML = V() + (S.toast ? `<div class="toast">${esc(S.toast)}</div>` : '');
+  if (tg && tg.BackButton) { try { BACK[S.screen] ? tg.BackButton.show() : tg.BackButton.hide(); } catch (e) {} }
+  ensureAdmin();
+}
+function go(screen) { S.screen = screen; render(); window.scrollTo(0, 0); }
+
+// ---------- Действия ----------
+const A = {
+  back() { go(BACK[S.screen] || 'home'); },
+  home() { go('home'); },
+  reload() { S.error = null; render(); load(); },
+  contact() { const url = 'https://t.me/' + CONTACT; tg && tg.openTelegramLink ? tg.openTelegramLink(url) : window.open(url); },
+  openBook() { if (!S.book.date) S.book.date = mskToday(); go('book'); },
+  openEvents() { go('events'); },
+  openEvent(d) { S.eventId = d.id; S.ticket = { qty: 1, method: 'transfer' }; go('event'); },
+  openAdmin() { S.admin.date = S.admin.date || mskToday(); S.admin.tab = 'day'; S.admin.day = null; S.admin.events = null; go('admin'); },
+  evFilter(d) { S.evFilter = d.v; render(); },
+  pickDay(d) { S.book.date = d.date; S.book.hours = []; render(); },
+  hour(d) { tapHour(+d.h); render(); },
+  people(d) { S.book.people = Math.min(S.data.settings.hall_capacity || 40, Math.max(1, S.book.people + +d.v)); render(); },
+  weeks(d) { S.book.weeks = Math.min(12, Math.max(2, S.book.weeks + +d.v)); render(); },
+  tq(d) {
+    const e = S.data.events.find(x => x.id === S.eventId);
+    S.ticket.qty = Math.min(e ? e.seats_left : 1, Math.max(1, S.ticket.qty + +d.v)); render();
+  },
+  toCheckout() { if (S.book.hours.length) go('checkout'); },
+
+  async submitBooking() {
+    const f = S.form;
+    if (!f.name.trim() || !f.phone.trim()) return toast('Укажите имя и телефон');
+    if (S.busy) return;
+    S.busy = true; render();
+    try {
+      try { tg && tg.requestWriteAccess && tg.requestWriteAccess(() => {}); } catch (e) {}
+      const hs = S.book.hours;
+      S.last = await api('create_booking', {
+        name: f.name.trim(), phone: f.phone.trim(), purpose: f.purpose.trim(), method: f.method,
+        date: S.book.date, start: Math.min(...hs), end: Math.max(...hs) + 1, people: S.book.people,
+        weeks: S.book.repeat ? S.book.weeks : 1
+      });
+      S.book.hours = [];
+      S.busy = false;
+      await load();
+      go('done');
+    } finally { S.busy = false; render(); }
+  },
+
+  async cancelBooking(d) {
+    if (!(await ask('Отменить эту бронь?'))) return;
+    const r = await api('cancel_booking', { id: d.id });
+    if (S.screen === 'admin') await refreshAdmin(); else await load();
+    toast(r.refund ? 'Бронь отменена' : 'Бронь отменена. Предоплата не возвращается');
+  },
+
+  async buyTicket() {
+    const e = S.data.events.find(x => x.id === S.eventId), f = S.form;
+    if (!f.name.trim() || !f.phone.trim()) return toast('Укажите имя и телефон');
+    if (S.busy) return;
+    S.busy = true; render();
+    try {
+      try { tg && tg.requestWriteAccess && tg.requestWriteAccess(() => {}); } catch (e) {}
+      await api('buy_ticket', {
+        event_id: e.id, name: f.name.trim(), phone: f.phone.trim(), qty: S.ticket.qty,
+        method: e.ticket_price > 0 ? S.ticket.method : 'cash'
+      });
+      S.busy = false;
+      await load();
+      go('home');
+      toast('Вы записаны! Детали — в чате с ботом');
+    } finally { S.busy = false; render(); }
+  },
+
+  // ----- админка -----
+  aTab(d) { S.admin.tab = d.v; if (d.v === 'prices') initEdit(); render(); },
+  aDay(d) { S.admin.date = d.date; S.admin.day = null; render(); },
+  async aBlock(d) { await api('admin_block', { date: S.admin.date, start: +d.h, end: +d.h + 1, reason: 'Закрыто' }); await refreshAdmin(); },
+  async aUnblock(d) { await api('admin_unblock', { date: S.admin.date, start: +d.h, end: +d.h + 1 }); await refreshAdmin(); },
+  async setPay(d) { await api('admin_set_payment', { kind: d.kind, id: d.id, status: d.v }); await refreshAdmin(); toast('Сохранено'); },
+  async aDayHours() {
+    const h = S.admin.dh;
+    if (!(h.open >= 0 && h.close <= 24 && h.close > h.open)) return toast('Проверьте часы');
+    await api('admin_day_hours', { date: S.admin.date, open: h.open, close: h.close, closed: !!h.closed });
+    await refreshAdmin(); toast('Часы сохранены');
+  },
+  async aDayReset() { await api('admin_day_hours', { date: S.admin.date, reset: true }); await refreshAdmin(); toast('Обычные часы'); },
+  async aCancelEvent(d) {
+    if (!(await ask('Отменить ивент? Участники получат сообщение.'))) return;
+    await api('admin_cancel_event', { id: d.id }); await refreshAdmin(); toast('Ивент отменён');
+  },
+  async aCreateEvent() {
+    const n = S.admin.ne;
+    if (!n.title.trim() || !n.date || !(n.end > n.start) || !(n.capacity > 0)) return toast('Заполните название, дату, время и места');
+    S.busy = true; render();
+    try {
+      await api('admin_create_event', { ...n, title: n.title.trim() });
+      S.admin.ne = { title: '', kind: 'masterclass', host: '', date: '', start: 18, end: 20, capacity: 30, price: 0, description: '' };
+      await refreshAdmin(); toast('Ивент создан');
+    } finally { S.busy = false; render(); }
+  },
+  async aSavePrices() {
+    const E = S.edit;
+    S.busy = true; render();
+    try {
+      await api('admin_prices', { tiers: E.tiers });
+      await api('admin_settings', E.settings);
+      await api('admin_discounts', { discounts: E.discounts });
+      await load(); initEdit(); toast('Сохранено');
+    } finally { S.busy = false; render(); }
+  },
+  async aAddDisc() {
+    const n = S.edit.nd;
+    if (!n.title.trim() || !(n.percent > 0)) return toast('Укажите название и процент');
+    await api('admin_discounts', { discounts: [{
+      title: n.title.trim(), percent: n.percent, kind: n.kind,
+      start_hour: n.kind === 'time' ? n.start : null, end_hour: n.kind === 'time' ? n.end : null, active: true
+    }] });
+    await load(); initEdit(); render(); toast('Скидка добавлена');
+  },
+  async aDelDisc(d) {
+    if (!(await ask('Удалить скидку?'))) return;
+    await api('admin_discounts', { delete: +d.id }); await load(); initEdit(); render();
+  },
+  async aBroadcast() {
+    const text = S.admin.bc.trim();
+    if (!text) return toast('Напишите текст');
+    if (!(await ask('Отправить сообщение всем клиентам?'))) return;
+    S.busy = true; render();
+    try {
+      const r = await api('admin_broadcast', { text });
+      S.admin.bc = ''; toast(`Отправлено ${r.sent} из ${r.total}`);
+    } finally { S.busy = false; render(); }
+  }
+};
+
+// ---------- События ----------
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-a]');
+  if (!el || el.disabled) return;
+  e.preventDefault();
+  const fn = A[el.dataset.a];
+  if (!fn) return;
+  try { await fn(el.dataset, el); } catch (err) { S.busy = false; toast(err.message); }
+});
+
+function onBind(e) {
+  const el = e.target;
+  if (!el.dataset || !el.dataset.bind) return;
+  if (e.type === 'change' && !['checkbox', 'radio', 'select-one'].includes(el.type)) return;
+  let v = el.value;
+  if (el.type === 'number') v = el.value === '' ? null : Number(el.value);
+  if (el.type === 'checkbox') v = el.checked;
+  if (el.type === 'radio' && !el.checked) return;
+  setPath(el.dataset.bind, v);
+  if (el.dataset.rerender) render();
+}
+document.addEventListener('input', onBind);
+document.addEventListener('change', onBind);
+
+if (tg && tg.BackButton) tg.BackButton.onClick(() => A.back());
+
+load();
+</script>
+</body>
+</html>

@@ -40,7 +40,25 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--pink)}
 .hero2{background:var(--s1);border:1.5px solid var(--pink);color:var(--text);border-radius:24px;padding:20px 22px;text-align:left;width:100%}
 .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;position:relative}
+.day.full{opacity:.45;text-decoration:line-through}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:8;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:520px;background:var(--bg);border-top:1px solid var(--line);border-radius:24px 24px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;max-height:92vh;overflow-y:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.cal .wd{font-size:11px;color:var(--muted);text-align:center;font-weight:700}
+.cd{height:46px;border-radius:12px;border:1px solid var(--line);background:var(--s1);color:var(--text);font-size:15px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
+.cd i{width:6px;height:6px;border-radius:3px;display:block}
+.cd.partial i{background:var(--soft)}
+.cd.event{border:1px dashed var(--soft)}
+.cd.event i{background:var(--soft)}
+.cd.full{background:#2A1E25;color:var(--dim);border-color:transparent;text-decoration:line-through}
+.cd.closed{background:none;color:var(--dim);border-style:dashed}
+.cd.out{opacity:.25}
+.cd.on{background:var(--pink);color:var(--ink);border-color:var(--pink);text-decoration:none}
+.cd.on i{background:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend b{width:12px;height:12px;border-radius:4px;display:inline-block}
 .days::-webkit-scrollbar,.tabs::-webkit-scrollbar{display:none}
 .day{flex:0 0 52px;height:62px;border-radius:14px;border:1px solid var(--line);background:var(--s1);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .day b{font-size:18px}.day span{font-size:11px;font-weight:600}
@@ -104,6 +122,8 @@ const ICON = {
   back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   arrow: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF2E93" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   crown: '<svg width="34" height="22" viewBox="0 0 34 22" fill="none" stroke="#FF2E93" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" style="margin-left:26px"><path d="M3 19 L5 5 L12 12 L17 2 L22 12 L29 5 L31 19 Z"/></svg>',
+  reload: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
+  cal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A9B9" stroke-width="1.8"><path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>'
 };
 
@@ -119,7 +139,7 @@ const S = {
     ne: { title: '', kind: 'masterclass', host: '', date: '', start: 18, end: 20, capacity: 30, price: 0, description: '' },
     bc: ''
   },
-  edit: null
+  edit: null, cal: null, listFilter: 'all'
 };
 
 // ---------- Утилиты ----------
@@ -177,6 +197,16 @@ function ask(text) {
   });
 }
 
+function fmtPhone(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d[0] === '8') d = '7' + d.slice(1);
+  else if (d[0] !== '7') d = '7' + d;
+  d = d.slice(0, 11);
+  return '+' + [d.slice(0, 1), d.slice(1, 4), d.slice(4, 7), d.slice(7, 9), d.slice(9, 11)].filter(Boolean).join(' ');
+}
+const phoneOk = v => String(v || '').replace(/\D/g, '').length === 11;
+
 function setPath(path, val) {
   const ks = path.split('.'); let o = S;
   for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
@@ -204,7 +234,8 @@ async function load() {
     const me = S.data.me;
     const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
     if (!S.form.name) S.form.name = (me.client && me.client.name) || (u && u.first_name) || '';
-    if (!S.form.phone) S.form.phone = (me.client && me.client.phone) || '';
+    if (!S.form.phone) S.form.phone = fmtPhone((me.client && me.client.phone) || '');
+    S.occMap = new Map(S.data.occupied.map(o => [o.date + '|' + o.hour, o.kind]));
   } catch (e) { S.error = e.message; }
   render();
 }
@@ -215,7 +246,23 @@ function dayInfo(date) {
   const s = S.data.settings;
   return o ? { open: o.open_hour, close: o.close_hour, closed: o.is_closed } : { open: s.open_hour, close: s.close_hour, closed: false };
 }
-function occKind(date, h) { const o = S.data.occupied.find(x => x.date === date && x.hour === h); return o ? o.kind : null; }
+function occKind(date, h) { return (S.occMap && S.occMap.get(date + '|' + h)) || null; }
+function dateStatus(date) {
+  const info = dayInfo(date);
+  if (info.closed) return 'closed';
+  const isToday = date === mskToday(), nowH = mskHour();
+  let total = 0, busy = 0, ev = false;
+  for (let h = info.open; h < info.close; h++) {
+    if (isToday && h <= nowH) continue;
+    total++;
+    const k = occKind(date, h);
+    if (k) { busy++; if (k === 'event') ev = true; }
+  }
+  if (!total) return 'closed';
+  if (!busy) return 'free';
+  if (busy >= total) return 'full';
+  return ev ? 'event' : 'partial';
+}
 function tierFor(n) { return S.data.tiers.find(t => n >= t.min_people && n <= t.max_people); }
 const DOWS = [1, 2, 3, 4, 5, 6, 0];
 const appliesDay = (d, dow) => !d.weekdays || d.weekdays.includes(dow);
@@ -261,7 +308,8 @@ function cancelNote(b) {
 }
 
 // ---------- Общие куски ----------
-const header = title => `<div class="row"><button class="back" data-a="back" aria-label="Назад">${ICON.back}</button><div class="h1">${title}</div></div>`;
+const reloadBtn = `<button class="back" data-a="reloadPage" aria-label="Обновить">${ICON.reload}</button>`;
+const header = title => `<div class="between"><div class="row"><button class="back" data-a="back" aria-label="Назад">${ICON.back}</button><div class="h1">${title}</div></div>${reloadBtn}</div>`;
 const dateBox = d => { const x = D(d); return `<div class="datebox"><b>${x.getUTCDate()}</b><span>${MON_S[x.getUTCMonth()]}</span></div>`; };
 const field = (label, bind, val, type = 'text', extra = '') =>
   `<div class="field"><label class="lbl" for="${bind}">${label}</label><input id="${bind}" type="${type}" data-bind="${bind}" value="${esc(val)}" ${extra}></div>`;
@@ -277,7 +325,8 @@ function dayStrip(selected, n, action) {
   return `<div class="days">${[...Array(n)].map((_, i) => {
     const d = addDays(mskToday(), i), x = D(d);
     const pct = action === 'pickDay' ? dayPct(d) : 0;
-    return `<button class="day ${d === selected ? 'on' : ''}" data-a="${action}" data-date="${d}" style="${pct ? 'height:72px' : ''}"><span>${WD[x.getUTCDay()]}</span><b>${x.getUTCDate()}</b>${pct ? `<span style="font-size:10px">до −${pct}%</span>` : ''}</button>`;
+    const st = dateStatus(d);
+    return `<button class="day ${d === selected ? 'on' : ''} ${st === 'full' || st === 'closed' ? 'full' : ''}" data-a="${action}" data-date="${d}" style="${pct ? 'height:72px' : ''}"><span>${WD[x.getUTCDay()]}</span><b>${x.getUTCDate()}</b>${pct ? `<span style="font-size:10px">до −${pct}%</span>` : ''}</button>`;
   }).join('')}</div>`;
 }
 
@@ -291,7 +340,7 @@ function vHome() {
   <div class="between" style="align-items:flex-start">
     <div class="col" style="gap:0">${ICON.crown}<span class="logo">MALO</span>
       <span class="small" style="letter-spacing:4px;margin-top:6px">DANCE STUDIO</span></div>
-    ${me.isAdmin ? '<button class="btn2 pink" data-a="openAdmin">Админка</button>' : ''}
+    <div class="row">${me.isAdmin ? '<button class="btn2 pink" data-a="openAdmin">Админка</button>' : ''}${reloadBtn}</div>
   </div>
   <div class="row muted">${ICON.pin} Архангельск, пр. Ломоносова, 32</div>
   <button class="hero" data-a="openBook">
@@ -341,7 +390,8 @@ function vBook() {
   }
   const t = tierFor(b.people), c = calc(), n = b.hours.length;
   return `${header('Бронь зала')}
-  <div class="col"><div class="sec">Дата</div>${dayStrip(b.date, 30, 'pickDay')}<div class="muted">${fmtDay(b.date)}</div></div>
+  <div class="col"><div class="between"><div class="sec">Дата</div><button class="btn2 sm row" style="gap:6px" data-a="openCal" data-t="book">${ICON.cal} Календарь</button></div>
+    ${dayStrip(b.date, 90, 'pickDay')}<div class="muted">${fmtDay(b.date)}</div></div>
   <div class="col">
     <div class="sec">Время</div>
     ${timeDisc.length ? `<div class="row" style="flex-wrap:wrap;gap:6px">${timeDisc.map(x => `<span class="tag dim">−${x.percent}% · ${hh(x.start_hour)}–${hh(x.end_hour)}</span>`).join('')}</div>` : ''}
@@ -377,7 +427,7 @@ function vCheckout() {
     <b style="font-size:20px">${fmtDay(b.date)}</b>
     <span class="muted">${hh(Math.min(...b.hours))}–${hh(Math.max(...b.hours) + 1)} · ${b.people} чел. · ${rub(c.total)}${b.repeat ? ' · ' + b.weeks + ' нед.' : ''}</span></div>
   ${field('Имя', 'form.name', f.name, 'text', 'autocomplete="name"')}
-  ${field('Телефон', 'form.phone', f.phone, 'tel', 'autocomplete="tel" placeholder="+7"')}
+  ${field('Телефон', 'form.phone', f.phone, 'tel', 'autocomplete="tel" inputmode="tel" data-phone="1" placeholder="+7 900 000 00 00"')}
   ${field('Цель аренды <span style="font-weight:500">(необязательно)</span>', 'form.purpose', f.purpose, 'text', 'placeholder="Репетиция, съёмка, тренировка…"')}
   <div class="col"><div class="sec">Способ предоплаты</div>${methodOptions('form.method', f.method)}</div>
   ${f.method === 'transfer' && s.transfer_details ? `<div class="card"><span class="small">Реквизиты</span><b>${esc(s.transfer_details)}</b>
@@ -429,17 +479,53 @@ function vEvent() {
   ${e.seats_left > 0 ? `
     <div class="between"><span class="muted">Билетов</span><div class="stepper"><button data-a="tq" data-v="-1" aria-label="Меньше">−</button><b>${t.qty}</b><button data-a="tq" data-v="1" aria-label="Больше">+</button></div></div>
     ${field('Имя', 'form.name', f.name)}
-    ${field('Телефон', 'form.phone', f.phone, 'tel', 'placeholder="+7"')}
+    ${field('Телефон', 'form.phone', f.phone, 'tel', 'inputmode="tel" data-phone="1" placeholder="+7 900 000 00 00"')}
     ${paid ? `<div class="col"><div class="sec">Оплата</div>${methodOptions('ticket.method', t.method)}</div>` : ''}
     <button class="btn" data-a="buyTicket" ${S.busy ? 'disabled' : ''}>${S.busy ? 'Записываем…' : paid ? 'Купить билет · ' + rub(e.ticket_price * t.qty) : 'Записаться бесплатно'}</button>` : ''}`;
+}
+
+// ---------- Календарь ----------
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+function vCal() {
+  const c = S.cal, [y, m] = c.month.split('-').map(Number);
+  const today = mskToday(), max = addDays(today, 89);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const lead = (first.getUTCDay() + 6) % 7;
+  const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const sel = c.target === 'book' ? S.book.date : S.admin.date;
+  let cells = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(w => `<div class="wd">${w}</div>`).join('');
+  for (let i = 0; i < lead; i++) cells += '<div></div>';
+  for (let d = 1; d <= n; d++) {
+    const ds = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const out = ds < today || ds > max;
+    const st = out ? 'out' : dateStatus(ds);
+    cells += `<button class="cd ${st} ${ds === sel ? 'on' : ''}" ${out ? 'disabled' : ''} data-a="calPick" data-date="${ds}">${d}<i></i></button>`;
+  }
+  const canPrev = c.month > today.slice(0, 7), canNext = c.month < max.slice(0, 7);
+  return `<div class="overlay" data-a="calClose"><div class="sheet" data-a="noop">
+    <div class="between">
+      <button class="back" data-a="calMove" data-v="-1" ${canPrev ? '' : 'disabled style="opacity:.3"'} aria-label="Предыдущий месяц">${ICON.back}</button>
+      <b style="font-size:20px">${MONTHS[m - 1]} ${y}</b>
+      <button class="back" data-a="calMove" data-v="1" ${canNext ? '' : 'disabled'} aria-label="Следующий месяц" style="transform:scaleX(-1);${canNext ? '' : 'opacity:.3'}">${ICON.back}</button>
+    </div>
+    <div class="cal">${cells}</div>
+    <div class="legend">
+      <span><b style="background:var(--s1);border:1px solid var(--line)"></b>свободно</span>
+      <span><b style="background:var(--s1);border:1px solid var(--line);box-shadow:inset 0 0 0 3px var(--s1),inset 0 0 0 6px var(--soft)"></b>частично занято</span>
+      <span><b style="border:1px dashed var(--soft)"></b>есть ивент</span>
+      <span><b style="background:#2A1E25"></b>занято полностью</span>
+      <span><b style="border:1px dashed var(--line)"></b>закрыто</span>
+    </div>
+    <button class="btn2" data-a="calClose">Закрыть</button>
+  </div></div>`;
 }
 
 // ---------- Админка ----------
 function vAdmin() {
   const tab = S.admin.tab;
-  const body = { day: vAdminDay, events: vAdminEvents, prices: vAdminPrices, broadcast: vAdminBroadcast }[tab]();
+  const body = { day: vAdminDay, list: vAdminList, events: vAdminEvents, prices: vAdminPrices, broadcast: vAdminBroadcast }[tab]();
   return `${header('Админка')}
-  <div class="tabs">${[['day', 'Расписание'], ['events', 'Ивенты'], ['prices', 'Цены и скидки'], ['broadcast', 'Рассылка']].map(([v, l]) =>
+  <div class="tabs">${[['day', 'Расписание'], ['list', 'Все брони'], ['events', 'Ивенты'], ['prices', 'Цены и скидки'], ['broadcast', 'Рассылка']].map(([v, l]) =>
     `<button class="chip ${tab === v ? 'on' : ''}" data-a="aTab" data-v="${v}">${l}</button>`).join('')}</div>${body}`;
 }
 
@@ -492,7 +578,33 @@ function vAdminDay() {
       ${day.dayHours ? '<span class="small">Для этого дня заданы особые часы</span>' : `<span class="small">Обычные часы: ${hh(s.open_hour)}–${hh(s.close_hour)}</span>`}
     </div>`;
   }
-  return `${dayStrip(A.date, 30, 'aDay')}<div class="sec">${fmtDay(A.date)}</div>${body}`;
+  return `<div class="between"><div class="sec">${fmtDay(A.date)}</div><button class="btn2 sm row" style="gap:6px" data-a="openCal" data-t="admin">${ICON.cal} Календарь</button></div>
+  ${dayStrip(A.date, 90, 'aDay')}${body}`;
+}
+
+function vAdminList() {
+  const A = S.admin;
+  if (!A.list) return '<div class="spin in"></div>';
+  const unpaid = b => b.payment_status === 'pending';
+  const items = A.list.filter(b => S.listFilter === 'all' || unpaid(b));
+  const chips = `<div class="tabs">${[['all', 'Все · ' + A.list.length], ['unpaid', 'Ждут оплату · ' + A.list.filter(unpaid).length]].map(([v, l]) =>
+    `<button class="chip ${S.listFilter === v ? 'on' : ''}" data-a="listFilter" data-v="${v}">${l}</button>`).join('')}</div>`;
+  if (!items.length) return chips + '<div class="card center muted">Броней нет</div>';
+  let html = chips, last = '';
+  for (const b of items) {
+    if (b.date !== last) { html += `<div class="sec" style="margin-top:6px">${fmtDay(b.date)}</div>`; last = b.date; }
+    const cl = b.clients || {};
+    const status = b.payment_status === 'pending' ? (b.receipt_at ? 'чек на проверке' : 'не оплачено') : PAY_SHORT[b.payment_status] || PAY[b.payment_status];
+    html += `<div class="card">
+      <div class="between"><b style="font-size:16px">${hh(b.start_hour)}–${hh(b.end_hour)} · ${esc(cl.name)}</b><span class="tag ${b.payment_status === 'pending' ? 'dim' : ''}">${status}</span></div>
+      <span class="small"><a href="tel:${esc(cl.phone)}" style="color:var(--soft)">${esc(cl.phone)}</a>${cl.username ? ' · @' + esc(cl.username) : ''}</span>
+      <span class="small">${b.people} чел. · ${rub(b.total - b.discount)} · предоплата ${rub(b.prepay)} · ${METHOD[b.payment_method]}${b.series_id ? ' · еженедельная' : ''}</span>
+      ${b.purpose ? `<span class="small">Цель: ${esc(b.purpose)}</span>` : ''}
+      <div class="row" style="gap:6px">${b.receipt_path ? `<button class="btn2 pink sm" data-a="aReceipt" data-id="${b.id}">Чек</button>` : ''}
+      <button class="btn2 sm" data-a="aGoDay" data-date="${b.date}">Открыть день</button></div>
+    </div>`;
+  }
+  return html;
 }
 
 function vAdminEvents() {
@@ -597,6 +709,12 @@ function ensureAdmin() {
     }).catch(e => { A.day = { bookings: [], occupied: [], events: [], dayHours: null }; toast(e.message); })
       .finally(() => { A.dayLoading = false; render(); });
   }
+  if (A.tab === 'list' && !A.list && !A.listLoading) {
+    A.listLoading = true;
+    api('admin_bookings').then(r => { A.list = r; })
+      .catch(e => { A.list = []; toast(e.message); })
+      .finally(() => { A.listLoading = false; render(); });
+  }
   if (A.tab === 'events' && !A.events && !A.evLoading) {
     A.evLoading = true;
     api('admin_events').then(r => { A.events = r; })
@@ -613,7 +731,7 @@ async function sendEventBroadcast(id) {
   } finally { S.busy = false; render(); }
 }
 
-async function refreshAdmin() { S.admin.day = null; S.admin.events = null; await load(); }
+async function refreshAdmin() { S.admin.day = null; S.admin.events = null; S.admin.list = null; await load(); }
 
 // ---------- Отрисовка ----------
 function render() {
@@ -625,7 +743,9 @@ function render() {
     return;
   }
   const V = { home: vHome, book: vBook, checkout: vCheckout, done: vDone, events: vEvents, event: vEvent, admin: vAdmin }[S.screen] || vHome;
-  app.innerHTML = V() + (S.toast ? `<div class="toast">${esc(S.toast)}</div>` : '');
+  app.innerHTML = V() + (S.cal ? vCal() : '') + (S.toast ? `<div class="toast">${esc(S.toast)}</div>` : '');
+  const on = app.querySelector('.days .day.on');
+  if (on) { const c = on.parentElement; c.scrollLeft = on.offsetLeft - c.clientWidth / 2 + on.clientWidth / 2; }
   if (tg && tg.BackButton) { try { BACK[S.screen] ? tg.BackButton.show() : tg.BackButton.hide(); } catch (e) {} }
   ensureAdmin();
 }
@@ -636,11 +756,30 @@ const A = {
   back() { go(BACK[S.screen] || 'home'); },
   home() { go('home'); },
   reload() { S.error = null; render(); load(); },
+  reloadPage() { location.reload(); },
+  noop() {},
+  openCal(d) {
+    const sel = d.t === 'book' ? S.book.date : S.admin.date;
+    S.cal = { target: d.t, month: (sel || mskToday()).slice(0, 7) }; render();
+  },
+  calClose() { S.cal = null; render(); },
+  calMove(d) {
+    const [y, m] = S.cal.month.split('-').map(Number);
+    const x = new Date(Date.UTC(y, m - 1 + +d.v, 1));
+    S.cal.month = x.toISOString().slice(0, 7); render();
+  },
+  calPick(d) {
+    if (S.cal.target === 'book') { S.book.date = d.date; S.book.hours = []; }
+    else { S.admin.date = d.date; S.admin.day = null; }
+    S.cal = null; render();
+  },
+  listFilter(d) { S.listFilter = d.v; render(); },
+  aGoDay(d) { S.admin.tab = 'day'; S.admin.date = d.date; S.admin.day = null; render(); window.scrollTo(0, 0); },
   contact() { const url = 'https://t.me/' + CONTACT; tg && tg.openTelegramLink ? tg.openTelegramLink(url) : window.open(url); },
   openBook() { if (!S.book.date) S.book.date = mskToday(); go('book'); },
   openEvents() { go('events'); },
   openEvent(d) { S.eventId = d.id; S.ticket = { qty: 1, method: 'transfer' }; go('event'); },
-  openAdmin() { S.admin.date = S.admin.date || mskToday(); S.admin.tab = 'day'; S.admin.day = null; S.admin.events = null; go('admin'); },
+  openAdmin() { S.admin.date = S.admin.date || mskToday(); S.admin.tab = 'day'; S.admin.day = null; S.admin.events = null; S.admin.list = null; go('admin'); },
   evFilter(d) { S.evFilter = d.v; render(); },
   pickDay(d) { S.book.date = d.date; S.book.hours = []; render(); },
   hour(d) { tapHour(+d.h); render(); },
@@ -654,7 +793,8 @@ const A = {
 
   async submitBooking() {
     const f = S.form;
-    if (!f.name.trim() || !f.phone.trim()) return toast('Укажите имя и телефон');
+    if (!f.name.trim()) return toast('Укажите имя');
+    if (!phoneOk(f.phone)) return toast('Введите телефон полностью: +7 900 000 00 00');
     if (S.busy) return;
     S.busy = true; render();
     try {
@@ -681,7 +821,8 @@ const A = {
 
   async buyTicket() {
     const e = S.data.events.find(x => x.id === S.eventId), f = S.form;
-    if (!f.name.trim() || !f.phone.trim()) return toast('Укажите имя и телефон');
+    if (!f.name.trim()) return toast('Укажите имя');
+    if (!phoneOk(f.phone)) return toast('Введите телефон полностью: +7 900 000 00 00');
     if (S.busy) return;
     S.busy = true; render();
     try {
@@ -814,6 +955,7 @@ function onBind(e) {
   if (el.type === 'number') v = el.value === '' ? null : Number(el.value);
   if (el.type === 'checkbox') v = el.checked;
   if (el.type === 'radio' && !el.checked) return;
+  if (el.dataset.phone) { v = fmtPhone(el.value); el.value = v; }
   setPath(el.dataset.bind, v);
   if (el.dataset.rerender) render();
 }

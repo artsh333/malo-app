@@ -333,6 +333,11 @@ function dayStrip(selected, n, action) {
 // ---------- Экраны ----------
 function vHome() {
   const d = S.data, me = d.me, s = d.settings;
+  if (me.client && me.client.blocked) {
+    return `<div class="col center" style="margin-top:20vh;align-items:center"><span class="logo">MALO</span>
+      <div class="h1" style="margin-top:16px">Доступ ограничен</div>
+      <div class="muted">Если это ошибка, напишите <a href="#" data-a="contact">@${CONTACT}</a></div></div>`;
+  }
   const minPrice = Math.min(...d.tiers.map(t => t.price_per_hour));
   const ev = d.events[0];
   const tickets = me.tickets.filter(t => t.events && t.events.date >= mskToday());
@@ -558,6 +563,7 @@ function vAdminDay() {
             ${b.receipt_path ? `<button class="btn2 pink sm" data-a="aReceipt" data-id="${b.id}">Чек</button>` : ''}
             ${['pending', 'prepaid', 'paid'].map(st => `<button class="chip ${b.payment_status === st ? 'on' : ''}" style="padding:7px 10px;font-size:12px" data-a="setPay" data-kind="booking" data-id="${b.id}" data-v="${st}">${PAY_SHORT[st]}</button>`).join('')}
             <button class="btn2 sm" data-a="cancelBooking" data-id="${b.id}">Отменить</button>
+            <button class="btn2 sm" data-a="aBlockClient" data-id="${b.client_id}" data-name="${esc(cl.name)}">Заблокировать</button>
           </div></div>`);
       } else if (o && o.event_id) {
         if (seen.has(o.event_id)) continue; seen.add(o.event_id);
@@ -582,6 +588,16 @@ function vAdminDay() {
   ${dayStrip(A.date, 90, 'aDay')}${body}`;
 }
 
+function vBlocked() {
+  const bl = S.admin.blocked;
+  if (!bl || !bl.length) return '';
+  return `<div class="sec" style="margin-top:14px">Заблокированные (${bl.length})</div>` + bl.map(c => `<div class="card">
+    <div class="between"><b>${esc(c.name || 'Без имени')}</b><span class="tag dim">заблокирован</span></div>
+    <span class="small">${esc(c.phone || '')}${c.username ? ' · @' + esc(c.username) : ''}${c.blocked_at ? ' · с ' + fmtTime(c.blocked_at) : ''}</span>
+    <button class="btn2 pink sm" data-a="aUnblockClient" data-id="${c.id}" data-name="${esc(c.name || '')}">Разблокировать</button>
+  </div>`).join('');
+}
+
 function vAdminList() {
   const A = S.admin;
   if (!A.list) return '<div class="spin in"></div>';
@@ -589,7 +605,7 @@ function vAdminList() {
   const items = A.list.filter(b => S.listFilter === 'all' || unpaid(b));
   const chips = `<div class="tabs">${[['all', 'Все · ' + A.list.length], ['unpaid', 'Ждут оплату · ' + A.list.filter(unpaid).length]].map(([v, l]) =>
     `<button class="chip ${S.listFilter === v ? 'on' : ''}" data-a="listFilter" data-v="${v}">${l}</button>`).join('')}</div>`;
-  if (!items.length) return chips + '<div class="card center muted">Броней нет</div>';
+  if (!items.length) return chips + '<div class="card center muted">Броней нет</div>' + vBlocked();
   let html = chips + `<button class="btn2" style="color:#FF6B8B;border-color:#FF6B8B" data-a="aCancelAll" ${S.busy ? 'disabled' : ''}>Отменить все будущие брони (${A.list.length})</button>`, last = '';
   for (const b of items) {
     if (b.date !== last) {
@@ -607,10 +623,11 @@ function vAdminList() {
       ${b.purpose ? `<span class="small">Цель: ${esc(b.purpose)}</span>` : ''}
       <div class="row" style="gap:6px">${b.receipt_path ? `<button class="btn2 pink sm" data-a="aReceipt" data-id="${b.id}">Чек</button>` : ''}
       <button class="btn2 sm" data-a="aGoDay" data-date="${b.date}">Открыть день</button>
-      <button class="btn2 sm" data-a="cancelBooking" data-id="${b.id}">Отменить</button></div>
+      <button class="btn2 sm" data-a="cancelBooking" data-id="${b.id}">Отменить</button>
+      <button class="btn2 sm" data-a="aBlockClient" data-id="${b.client_id}" data-name="${esc(cl.name)}">Заблокировать</button></div>
     </div>`;
   }
-  return html;
+  return html + vBlocked();
 }
 
 function vAdminEvents() {
@@ -717,6 +734,7 @@ function ensureAdmin() {
   }
   if (A.tab === 'list' && !A.list && !A.listLoading) {
     A.listLoading = true;
+    api('admin_blocked_list').then(r => { A.blocked = r; render(); }).catch(() => {});
     api('admin_bookings').then(r => { A.list = r; })
       .catch(e => { A.list = []; toast(e.message); })
       .finally(() => { A.listLoading = false; render(); });
@@ -780,6 +798,18 @@ const A = {
     S.cal = null; render();
   },
   listFilter(d) { S.listFilter = d.v; render(); },
+  async aBlockClient(d) {
+    if (!(await ask(`Заблокировать клиента ${d.name}? Он не сможет бронировать и покупать билеты.`))) return;
+    const cancel = await ask('Отменить все его будущие брони и билеты? (Отмена — оставить их)');
+    const r = await api('admin_block_client', { client_id: d.id, cancel_future: cancel });
+    await refreshAdmin();
+    toast('Клиент заблокирован' + (r.cancelled ? ` · отменено: ${r.cancelled}` : ''));
+  },
+  async aUnblockClient(d) {
+    if (!(await ask(`Разблокировать ${d.name}?`))) return;
+    await api('admin_unblock_client', { client_id: d.id });
+    await refreshAdmin(); toast('Клиент разблокирован');
+  },
   aGoDay(d) { S.admin.tab = 'day'; S.admin.date = d.date; S.admin.day = null; render(); window.scrollTo(0, 0); },
   contact() { const url = 'https://t.me/' + CONTACT; tg && tg.openTelegramLink ? tg.openTelegramLink(url) : window.open(url); },
   openBook() { if (!S.book.date) S.book.date = mskToday(); go('book'); },

@@ -139,7 +139,8 @@ const S = {
     tab: 'day', date: null, day: null, dayLoading: false, dh: { open: 9, close: 22, closed: false },
     events: null, evLoading: false,
     ne: { title: '', kind: 'masterclass', host: '', date: '', start: 18, end: 20, capacity: 30, price: 0, description: '' },
-    bc: ''
+    bc: '',
+    nr: { title: '', weekdays: [], start: 18, end: 20 }
   },
   edit: null, cal: null, listFilter: 'all'
 };
@@ -248,7 +249,12 @@ function dayInfo(date) {
   const s = S.data.settings;
   return o ? { open: o.open_hour, close: o.close_hour, closed: o.is_closed } : { open: s.open_hour, close: s.close_hour, closed: false };
 }
-function occKind(date, h) { return (S.occMap && S.occMap.get(date + '|' + h)) || null; }
+function recurringAt(date, h) {
+  const dow = D(date).getUTCDay();
+  const rules = S.admin.rec ? S.admin.rec.filter(r => r.active) : (S.data.recurring || []);
+  return rules.find(r => r.weekdays.includes(dow) && h >= r.start_hour && h < r.end_hour) || null;
+}
+function occKind(date, h) { return (S.occMap && S.occMap.get(date + '|' + h)) || (recurringAt(date, h) ? 'busy' : null); }
 function dateStatus(date) {
   const info = dayInfo(date);
   if (info.closed) return 'closed';
@@ -536,9 +542,9 @@ function vCal() {
 // ---------- Админка ----------
 function vAdmin() {
   const tab = S.admin.tab;
-  const body = { day: vAdminDay, list: vAdminList, events: vAdminEvents, prices: vAdminPrices, broadcast: vAdminBroadcast }[tab]();
+  const body = { day: vAdminDay, list: vAdminList, rec: vAdminRec, events: vAdminEvents, prices: vAdminPrices, broadcast: vAdminBroadcast }[tab]();
   return `${header('Админка')}
-  <div class="tabs">${[['day', 'Расписание'], ['list', 'Все брони'], ['events', 'Ивенты'], ['prices', 'Цены и скидки'], ['broadcast', 'Рассылка']].map(([v, l]) =>
+  <div class="tabs">${[['day', 'Расписание'], ['list', 'Все брони'], ['rec', 'Постоянные закрытия'], ['events', 'Ивенты'], ['prices', 'Цены и скидки'], ['broadcast', 'Рассылка']].map(([v, l]) =>
     `<button class="chip ${tab === v ? 'on' : ''}" data-a="aTab" data-v="${v}">${l}</button>`).join('')}</div>${body}`;
 }
 
@@ -579,6 +585,9 @@ function vAdminDay() {
         rows += row(h, `<div class="b evb"><b>${esc(e ? e.title : 'Ивент')}</b><span class="small">${e ? hh(e.start_hour) + '–' + hh(e.end_hour) + ' · ' + KIND[e.kind] : ''}</span></div>`);
       } else if (o) {
         rows += row(h, `<div class="b blk"><span class="muted">${esc(o.block_reason)}</span><button class="btn2 pink sm" data-a="aUnblock" data-h="${h}">Открыть</button></div>`);
+      } else if (recurringAt(A.date, h)) {
+        const r = recurringAt(A.date, h);
+        rows += row(h, `<div class="b blk"><span class="muted">Постоянно: ${esc(r.title || 'закрыто')}</span><button class="btn2 sm" data-a="aTab" data-v="rec">Настроить</button></div>`);
       } else {
         const out = di.closed || h < di.open || h >= di.close;
         rows += row(h, `<div class="b free"><span>${out ? 'вне часов работы' : 'свободно'}</span>${out ? '' : `<button class="btn2 sm" data-a="aBlock" data-h="${h}">Закрыть</button>`}</div>`);
@@ -636,6 +645,27 @@ function vAdminList() {
     </div>`;
   }
   return html + vBlocked();
+}
+
+function vAdminRec() {
+  const A = S.admin, nr = A.nr;
+  const list = !A.rec ? '<div class="spin in"></div>' : (A.rec.length ? A.rec.map(r => `<div class="card" style="${r.active ? '' : 'opacity:.55'}">
+      <div class="between"><b style="font-size:16px">${esc(r.title)}</b><span class="tag ${r.active ? '' : 'dim'}">${r.active ? 'действует' : 'на паузе'}</span></div>
+      <span class="muted">${daysLabel(r.weekdays)} · ${hh(r.start_hour)}–${hh(r.end_hour)}</span>
+      <div class="grid2"><button class="btn2 sm" data-a="aRecToggle" data-id="${r.id}" data-v="${r.active ? 0 : 1}">${r.active ? 'Поставить на паузу' : 'Включить'}</button>
+      <button class="btn2 sm" data-a="aRecDelete" data-id="${r.id}">Удалить</button></div>
+    </div>`).join('') : '<div class="card center muted">Постоянных закрытий пока нет</div>');
+  return `<div class="card"><b style="font-size:18px">Что это</b>
+      <span class="muted">Время, которое закрыто для брони <b>каждую неделю</b>. Например, если по вторникам и четвергам с 18 до 20 в зале занимается своя группа — создайте правило один раз, и клиенты никогда не смогут забронировать это время.</span>
+      <span class="small">Чтобы закрыть время только в один конкретный день, используйте кнопку «Закрыть» во вкладке «Расписание».</span></div>
+    <div class="col">${list}</div>
+    <div class="card"><b style="font-size:18px">Новое правило</b>
+      ${field('Название (видно только админам)', 'admin.nr.title', nr.title, 'text', 'placeholder="Например: Группа хип-хопа"')}
+      <span class="lbl">Дни недели</span>${dowChips('admin.nr', nr.weekdays)}
+      <div class="grid2">${field('С (час)', 'admin.nr.start', nr.start, 'number', 'min="0" max="23"')}${field('До (час)', 'admin.nr.end', nr.end, 'number', 'min="1" max="24"')}</div>
+      <span class="small">Например: Вт и Чт, с 18 до 20 — закрыто 18:00–20:00 каждую неделю</span>
+      <button class="btn" data-a="aRecAdd" ${S.busy ? 'disabled' : ''}>Добавить правило</button>
+    </div>`;
 }
 
 function vAdminEvents() {
@@ -740,6 +770,12 @@ function ensureAdmin() {
     }).catch(e => { A.day = { bookings: [], occupied: [], events: [], dayHours: null }; toast(e.message); })
       .finally(() => { A.dayLoading = false; render(); });
   }
+  if ((A.tab === 'rec' || A.tab === 'day') && !A.rec && !A.recLoading) {
+    A.recLoading = true;
+    api('admin_recurring_list').then(r => { A.rec = r; })
+      .catch(e => { A.rec = []; toast(e.message); })
+      .finally(() => { A.recLoading = false; render(); });
+  }
   if (A.tab === 'list' && !A.list && !A.listLoading) {
     A.listLoading = true;
     api('admin_blocked_list').then(r => { A.blocked = r; render(); }).catch(() => {});
@@ -763,7 +799,7 @@ async function sendEventBroadcast(id) {
   } finally { S.busy = false; render(); }
 }
 
-async function refreshAdmin() { S.admin.day = null; S.admin.events = null; S.admin.list = null; await load(); }
+async function refreshAdmin() { S.admin.day = null; S.admin.events = null; S.admin.list = null; S.admin.rec = null; await load(); }
 
 // ---------- Отрисовка ----------
 function render() {
@@ -817,6 +853,31 @@ const A = {
     if (!(await ask(`Разблокировать ${d.name}?`))) return;
     await api('admin_unblock_client', { client_id: d.id });
     await refreshAdmin(); toast('Клиент разблокирован');
+  },
+  async aRecAdd() {
+    const nr = S.admin.nr;
+    const weekdays = nr.weekdays === null ? [0, 1, 2, 3, 4, 5, 6] : nr.weekdays;
+    if (!weekdays.length) return toast('Выберите хотя бы один день');
+    if (!(Number.isInteger(nr.start) && Number.isInteger(nr.end) && nr.start >= 0 && nr.end <= 24 && nr.end > nr.start)) return toast('Проверьте часы');
+    S.busy = true; render();
+    try {
+      const r = await api('admin_recurring_save', { rule: { title: nr.title, weekdays, start_hour: nr.start, end_hour: nr.end } });
+      S.admin.nr = { title: '', weekdays: [], start: 18, end: 20 };
+      await refreshAdmin();
+      if (r.conflicts && r.conflicts.length) {
+        const text = `Правило добавлено. Но на это время уже есть брони (${r.conflicts.length}):\n\n${r.conflicts.slice(0, 10).join('\n')}${r.conflicts.length > 10 ? '\n…' : ''}\n\nОни не отменены — при необходимости отмените их во вкладке «Все брони».`;
+        if (tg && tg.showAlert && tg.initData) tg.showAlert(text); else alert(text);
+      } else toast('Правило добавлено');
+    } finally { S.busy = false; render(); }
+  },
+  async aRecToggle(d) {
+    await api('admin_recurring_toggle', { id: +d.id, active: d.v === '1' });
+    await refreshAdmin(); toast(d.v === '1' ? 'Правило включено' : 'Правило на паузе');
+  },
+  async aRecDelete(d) {
+    if (!(await ask('Удалить это правило? Время снова станет доступно для брони.'))) return;
+    await api('admin_recurring_delete', { id: +d.id });
+    await refreshAdmin(); toast('Правило удалено');
   },
   aGoDay(d) { S.admin.tab = 'day'; S.admin.date = d.date; S.admin.day = null; render(); window.scrollTo(0, 0); },
   contact() { const url = 'https://t.me/' + CONTACT; tg && tg.openTelegramLink ? tg.openTelegramLink(url) : window.open(url); },

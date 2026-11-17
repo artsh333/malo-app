@@ -118,7 +118,7 @@ const METHOD = { transfer: 'Переводом', cash: 'Наличными в з
 const PAY = { pending: 'ждёт предоплату', prepaid: 'предоплата ✓', paid: 'оплачено ✓', refunded: 'возврат' };
 const PAY_SHORT = { pending: 'не оплачено', prepaid: 'предоплата', paid: 'оплачено' };
 const KIND = { masterclass: 'Мастер-класс', party: 'Вечеринка' };
-const BACK = { book: 'home', checkout: 'book', done: 'home', events: 'home', event: 'events', admin: 'home' };
+const BACK = { book: 'home', checkout: 'book', done: 'home', events: 'home', event: 'events', reviews: 'home', admin: 'home' };
 
 const ICON = {
   back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
@@ -365,6 +365,9 @@ function vHome() {
   <button class="hero2 between" data-a="openEvents">
     <span class="col" style="gap:4px"><b style="font-size:22px">Афиша</b><span class="muted">Мастер-классы и вечеринки</span></span>${ICON.arrow}
   </button>
+  <button class="hero2 between" data-a="openReviews">
+    <span class="col" style="gap:4px"><b style="font-size:22px">Отзывы</b><span class="muted">${reviewSummary(d.reviews)}</span></span>${ICON.arrow}
+  </button>
   ${ev ? `<div class="col"><div class="sec">Ближайший ивент</div>${evCard(ev)}</div>` : ''}
   ${me.bookings.length ? `<div class="col"><div class="sec">Мои брони</div>${me.bookings.map(b => `
     <div class="card">
@@ -383,6 +386,39 @@ function vHome() {
   <div class="row" style="flex-wrap:wrap;gap:8px">${['до ' + s.hall_capacity + ' человек', 'световое шоу', 'проф. звук', 'зеркала', 'раздевалка'].map(x => `<span class="tag dim">${x}</span>`).join('')}</div>
   <div class="center muted">Вопросы: <a href="#" data-a="contact">@${CONTACT}</a></div>
   <div class="hand center" style="font-size:22px;color:var(--pink);margin-top:auto">dance · people · vibes · malo ♡</div>`;
+}
+
+function reviewSummary(reviews) {
+  const list = Array.isArray(reviews) ? reviews : [];
+  if (!list.length) return 'Пока отзывов нет';
+  const avg = list.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / list.length;
+  return `★ ${avg.toFixed(1)} · ${list.length} ${reviewsWord(list.length)}`;
+}
+
+function reviewsWord(n) {
+  const n10 = n % 10, n100 = n % 100;
+  return n10 === 1 && n100 !== 11 ? 'отзыв' : n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14) ? 'отзыва' : 'отзывов';
+}
+
+function vReviews() {
+  const list = [...(Array.isArray(S.data.reviews) ? S.data.reviews : [])]
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  const avg = list.length ? list.reduce((sum, r) => sum + (Number(r.rating) || 0), 0) / list.length : 0;
+  const textOf = r => r.review_text ?? r.text ?? r.comment ?? r.message ?? r.body ?? '';
+  const nameOf = r => r.client_name ?? r.author_name ?? r.name ?? r.author ?? r.client ?? 'Гость';
+  return `<div class="col" style="min-height:80vh">${header('Отзывы')}
+    <div class="card center" style="align-items:center;padding:22px">
+      <div style="color:var(--pink);font-size:30px;font-weight:800">${list.length ? `★ ${avg.toFixed(1)}` : '♡'}</div>
+      <div class="muted">${list.length ? `${list.length} ${reviewsWord(list.length)} о MALO` : 'Пока отзывов нет'}</div>
+    </div>
+    ${list.length ? `<div class="col">${list.map(r => `<div class="card">
+      <div class="between"><b>${esc(nameOf(r))}</b><span style="color:var(--pink);letter-spacing:2px">${'★'.repeat(Math.max(0, Math.min(5, Number(r.rating) || 0)))}${'☆'.repeat(5 - Math.max(0, Math.min(5, Number(r.rating) || 0)))}</span></div>
+      <div class="muted">${esc(textOf(r) || 'Без текста')}</div>
+      ${r.created_at ? `<div class="small">${new Date(r.created_at).toLocaleDateString('ru-RU')}</div>` : ''}
+    </div>`).join('')}</div>` : '<div class="card center muted">Опубликованные отзывы появятся здесь.</div>'}
+    <div class="card"><b>Хотите поделиться впечатлением?</b><span class="muted">Оставьте отзыв в чате бота — он появится здесь после проверки.</span>
+      <button class="btn" data-a="openReviewChat">Оставить отзыв</button></div>
+  </div>`;
 }
 
 function vBook() {
@@ -810,7 +846,7 @@ function render() {
       : '<div class="spin"></div>';
     return;
   }
-  const V = { home: vHome, book: vBook, checkout: vCheckout, done: vDone, events: vEvents, event: vEvent, admin: vAdmin }[S.screen] || vHome;
+  const V = { home: vHome, book: vBook, checkout: vCheckout, done: vDone, events: vEvents, event: vEvent, reviews: vReviews, admin: vAdmin }[S.screen] || vHome;
   app.innerHTML = V() + (S.cal ? vCal() : '') + (S.toast ? `<div class="toast">${esc(S.toast)}</div>` : '');
   const on = app.querySelector('.days .day.on');
   if (on) { const c = on.parentElement; c.scrollLeft = on.offsetLeft - c.clientWidth / 2 + on.clientWidth / 2; }
@@ -823,6 +859,12 @@ function go(screen) { S.screen = screen; render(); window.scrollTo(0, 0); }
 const A = {
   back() { go(BACK[S.screen] || 'home'); },
   home() { go('home'); },
+  openReviews() { go('reviews'); },
+  openReviewChat() {
+    const url = `https://t.me/${CONTACT}`;
+    if (tg && tg.openTelegramLink) tg.openTelegramLink(url);
+    else window.open(url, '_blank', 'noopener');
+  },
   reload() { S.error = null; render(); load(); },
   reloadPage() { location.reload(); },
   noop() {},
